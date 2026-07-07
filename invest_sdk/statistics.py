@@ -1,87 +1,82 @@
+from decimal import Decimal
+
 from invest_sdk.models import PositionInfo, PortfolioSummary
 from invest_sdk.money import Money
-
-
-from dataclasses import dataclass
-from decimal import Decimal
+from invest_sdk.repository import InstrumentRepository
 
 
 class Statistics:
     """
-    Все вычисления над портфелем.
+    Выполняет вычисления и преобразует объекты SDK
+    в модели библиотеки.
     """
 
-    def __init__(self, portfolio):
-        self.portfolio = portfolio
+    def __init__(self, client):
 
-    def position_value(self, position):
-        """
-        Стоимость позиции.
-        """
+        self._repository = InstrumentRepository(client)
 
-        qty = Money.to_decimal(position.quantity)
+    # ------------------------------------------------------------------
+
+    def make_position(self, position) -> PositionInfo:
+
+        instrument = self._repository.by_uid(position.instrument_uid)
+
+        quantity = Money.to_decimal(position.quantity)
         price = Money.to_decimal(position.current_price)
-
-        return qty * price
-    
-    def make_position(self, position):
-        """
-        Преобразует PortfolioPosition SDK в PositionInfo.
-        """
-
-        qty = Money.to_decimal(position.quantity)
-
-        average_price = Money.to_decimal(position.average_position_price)
-
-        current_price = Money.to_decimal(position.current_price)
-
-        value = qty * current_price
+        average = Money.to_decimal(position.average_position_price)
+        value = quantity * price
 
         profit = Money.to_decimal(position.expected_yield)
+        daily = Money.to_decimal(position.daily_yield)
 
-        daily_profit = Money.to_decimal(position.daily_yield)
-
-        cost = qty * average_price
-
-        if cost:
-            profit_percent = profit / cost * Decimal("100")
+        if quantity and average:
+            invested = quantity * average
+            profit_percent = (
+                profit / invested * Decimal("100")
+            )
         else:
             profit_percent = Decimal("0")
 
         return PositionInfo(
-            ticker=position.ticker,
-            name="",                           # позже заполнит Repository
-            instrument_type=position.instrument_type,
-
-            quantity=qty,
-
-            average_price=average_price,
-            current_price=current_price,
-
+            uid=instrument.uid,
+            ticker=instrument.ticker,
+            name=instrument.name,
+            isin=instrument.isin,
+            instrument_type=instrument.instrument_type,
+            currency=instrument.currency,
+            lot=instrument.lot,
+            quantity=quantity,
+            current_price=price,
+            average_price=average,
             value=value,
-
             profit=profit,
             profit_percent=profit_percent,
-
-            daily_profit=daily_profit,
-
-            currency=position.current_price.currency,
+            daily_profit=daily,
         )
-        
-    def positions(self):
-        """
-        Возвращает позиции портфеля в виде PositionInfo,
-        отсортированные по стоимости.
-        """
 
-        for position in self.portfolio.sorted_by_value():
-            yield self.make_position(position)
-            
-    
-    def summary(self) -> PortfolioSummary:
+    # ------------------------------------------------------------------
+
+    def make_summary(self, portfolio):
+
+        total_profit = sum(
+            Money.to_decimal(position.expected_yield)
+            for position in portfolio.positions
+        )
+
+        total_value = sum(
+            Money.to_decimal(position.quantity) *
+            Money.to_decimal(position.current_price)
+            for position in portfolio.positions
+        )
+
+        daily_profit = sum(
+            Money.to_decimal(position.daily_yield)
+            for position in portfolio.positions
+        )
+
         return PortfolioSummary(
-            positions=len(self.portfolio.positions),
-            total_value=self.portfolio.total_value(),
-            total_profit=self.portfolio.total_yield(),
-            daily_profit=self.portfolio.total_daily_yield(),
+            positions=len(portfolio.positions),
+            total_value=total_value,
+            total_profit=total_profit,
+            daily_profit=daily_profit,
         )

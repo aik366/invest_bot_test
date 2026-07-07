@@ -26,11 +26,7 @@ def main():
             account.id
         )
 
-        stats = Statistics(portfolio)
-        
-        info = stats.make_position(portfolio.positions[0])
-        print(type(info))
-        print(info)
+        stats = Statistics(client)
         
         printer = Printer(portfolio=portfolio, account=account)
         printer.print_header()
@@ -38,17 +34,11 @@ def main():
         for position in portfolio.sorted_by_value():
             info = stats.make_position(position)
             printer.print_position(info)
-        
-        total = portfolio.total_value()
-        total_yield = portfolio.total_yield()
-        total_daily_yield = portfolio.total_daily_yield()
-        
 
-        summary = stats.summary()
+        
+        summary = stats.make_summary(portfolio.portfolio)
 
         printer.print_summary(summary)
-    
-    
 
 
 if __name__ == "__main__":

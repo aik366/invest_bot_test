@@ -6,27 +6,29 @@ from decimal import Decimal
 # Информация о позиции
 # ======================================================================
 
+from dataclasses import dataclass
+from decimal import Decimal
+
+
 @dataclass(slots=True)
 class PositionInfo:
     """
-    Подготовленная информация о позиции портфеля.
-
-    Все значения уже преобразованы к Decimal и готовы
-    для вывода, экспорта и анализа.
+    Полная информация о позиции портфеля.
     """
-
+    uid: str
     ticker: str
     name: str
+    isin: str
     instrument_type: str
-
+    currency: str
     quantity: Decimal
-    average_price: Decimal
+    lot: int
     current_price: Decimal
+    average_price: Decimal
     value: Decimal
     profit: Decimal
     profit_percent: Decimal
     daily_profit: Decimal
-    currency: str
 
 
 # ======================================================================

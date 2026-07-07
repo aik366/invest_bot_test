@@ -1,53 +1,45 @@
 from invest_sdk.models import InstrumentInfo
-from t_tech.invest.schemas import InstrumentIdType
+from invest_sdk.services.instruments import InstrumentService
 
 
 class InstrumentRepository:
     """
     Репозиторий инструментов.
 
-    Единственная точка получения информации
-    об инструментах через API Т-Банка.
-
-    В дальнейшем здесь появится кэш.
+    Отвечает за кэширование информации об инструментах.
     """
 
     def __init__(self, client):
 
-        self.client = client
-
-        # Пока обычный словарь.
-        # Позже сделаем полноценный Cache.
-        self._cache = {}
+        self._service = InstrumentService(client)
+        self._cache: dict[str, InstrumentInfo] = {}
 
     # ---------------------------------------------------------
 
-    def get(self, instrument_uid: str) -> InstrumentInfo:
+    def by_uid(self, uid: str) -> InstrumentInfo:
         """
         Возвращает InstrumentInfo по UID.
-
-        Если инструмент уже загружен,
-        используется кэш.
         """
 
-        if instrument_uid in self._cache:
-            return self._cache[instrument_uid]
+        if uid not in self._cache:
+            self._cache[uid] = self._service.by_uid(uid)
 
-        instrument = self.client.instruments.get_instrument_by(
-            id_type=InstrumentIdType.INSTRUMENT_ID_TYPE_UID,
-            id=instrument_uid,
-            ).instrument
+        return self._cache[uid]
 
-        info = InstrumentInfo(
-            uid=instrument.uid,
-            ticker=instrument.ticker,
-            name=instrument.name,
-            lot=instrument.lot,
-            currency=instrument.currency,
-            instrument_type=instrument.instrument_type,
-            isin=instrument.isin,
-        )
+    # ---------------------------------------------------------
 
-        self._cache[instrument_uid] = info
+    def clear(self):
 
-        return info
+        self._cache.clear()
+
+    # ---------------------------------------------------------
+
+    def __contains__(self, uid: str):
+
+        return uid in self._cache
+
+    # ---------------------------------------------------------
+
+    def __len__(self):
+
+        return len(self._cache)
