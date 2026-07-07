@@ -1,35 +1,50 @@
-from invest_sdk.client import get_client
-from invest_sdk.models import Account
-
-from invest_sdk import cache
+from t_tech.invest.schemas import Account
 
 
 class Accounts:
+    """
+    Работа со счетами пользователя.
+    """
 
-    @staticmethod
-    def all():
+    def __init__(self, client):
 
-        if cache._accounts is not None:
-            return cache._accounts
+        self.client = client
 
-        with get_client() as client:
+        # Получаем список счетов один раз
+        self.accounts = client.users.get_accounts().accounts
 
-            response = client.users.get_accounts()
+    # -----------------------------------------------------
 
-            accounts = []
+    def print(self):
 
-            for item in response.accounts:
+        print()
+        print("=" * 60)
+        print("ДОСТУПНЫЕ СЧЕТА")
+        print("=" * 60)
 
-                accounts.append(
-                    Account(
-                        id=item.id,
-                        name=item.name,
-                        type=item.type.name,
-                        access_level=item.access_level.name,
-                    )
-                )
+        for i, account in enumerate(self.accounts, start=1):
 
-            cache._accounts = accounts
+            print(f"{i}. {account.name}")
 
-            return accounts
-        
+        print()
+
+    # -----------------------------------------------------
+
+    def choose(self) -> Account:
+
+        while True:
+
+            try:
+
+                number = int(input("Введите номер счета: "))
+
+                if 1 <= number <= len(self.accounts):
+
+                    return self.accounts[number - 1]
+
+                print("Такого номера нет.\n")
+
+            except ValueError:
+
+                print("Введите число.\n")
+                

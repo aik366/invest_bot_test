@@ -1,18 +1,53 @@
+from invest_sdk.models import InstrumentInfo
+from t_tech.invest.schemas import InstrumentIdType
+
+
 class InstrumentRepository:
+    """
+    Репозиторий инструментов.
 
-    def __init__(self):
+    Единственная точка получения информации
+    об инструментах через API Т-Банка.
 
-        self._uid = {}
-        self._ticker = {}
-        self._figi = {}
-        self._isin = {}
+    В дальнейшем здесь появится кэш.
+    """
 
-    def add(self, uid, ticker):
+    def __init__(self, client):
 
-        self._uid[uid] = ticker
+        self.client = client
 
-        self._ticker[ticker] = uid
+        # Пока обычный словарь.
+        # Позже сделаем полноценный Cache.
+        self._cache = {}
 
-    def count(self):
+    # ---------------------------------------------------------
 
-        return len(self._uid)
+    def get(self, instrument_uid: str) -> InstrumentInfo:
+        """
+        Возвращает InstrumentInfo по UID.
+
+        Если инструмент уже загружен,
+        используется кэш.
+        """
+
+        if instrument_uid in self._cache:
+            return self._cache[instrument_uid]
+
+        instrument = self.client.instruments.get_instrument_by(
+            id_type=InstrumentIdType.INSTRUMENT_ID_TYPE_UID,
+            id=instrument_uid,
+            ).instrument
+
+        info = InstrumentInfo(
+            uid=instrument.uid,
+            ticker=instrument.ticker,
+            name=instrument.name,
+            lot=instrument.lot,
+            currency=instrument.currency,
+            instrument_type=instrument.instrument_type,
+            isin=instrument.isin,
+        )
+
+        self._cache[instrument_uid] = info
+
+        return info

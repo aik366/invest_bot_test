@@ -1,143 +1,98 @@
-from invest_sdk.instrument_cache import InstrumentCache
-from invest_sdk.utils import instrument_name
-from invest_sdk.money import money_to_decimal, quotation_to_decimal, format_percent, format_money
-
+from invest_sdk.money import Money
 
 class Portfolio:
+    """
+    Работа с портфелем одного счета.
+    """
 
-    def __init__(self, client):
+    def __init__(self, client, account_id):
+
         self.client = client
-        self.cache = InstrumentCache(client)
+        self.account_id = account_id
 
-        account = client.users.get_accounts().accounts[0]
-        self.account_id = account.id
-
-        self._portfolio = client.operations.get_portfolio(
-            account_id=self.account_id
+        # Получаем портфель выбранного счета
+        self.portfolio = client.operations.get_portfolio(
+            account_id=account_id
         )
 
-    # -------------------------
-    # базовые данные
-    # -------------------------
+    # -----------------------------------------------------
 
+    @property
     def positions(self):
-        return self._portfolio.positions
+        """
+        Все позиции портфеля.
+        """
+        return self.portfolio.positions
 
-    # -------------------------
-    # печать портфеля
-    # -------------------------
+    # -----------------------------------------------------
 
-    def print(self):
+    @property
+    def total_amount(self):
+        """
+        Общая стоимость портфеля.
+        """
+        return self.portfolio.total_amount_portfolio
 
-        for position in self._portfolio.positions:
-            self._print_position(position)
+    # -----------------------------------------------------
 
-    # -------------------------
-    # внутренняя логика
-    # -------------------------
+    @property
+    def expected_yield(self):
+        """
+        Общая прибыль портфеля.
+        """
+        return self.portfolio.expected_yield
 
-    def _print_position(self, position):
 
-        info = self.cache.get(position.figi)
+    def sorted_by_value(self, reverse=True):
+        """
+        Сортировка позиций по стоимости
+        """
 
-        print("=" * 60)
-        print(f"Компания:   {info.name}")
-        print(f"Тикер:      {position.ticker}")
-        print(f"Тип:        {instrument_name(position.instrument_type)}")
+        def get_value(position):
+            qty = Money.to_decimal(position.quantity)
+            price = Money.to_decimal(position.current_price)
+            return qty * price
 
-        qty = money_to_decimal(position.quantity)
-        price = money_to_decimal(position.current_price)
-        pnl = money_to_decimal(position.expected_yield)
-
-        print(f"Количество: {qty}")
-        print(f"Цена:       {price}")
-        print(f"Прибыль:    {pnl}")
-
-    # -------------------------
-    # ОБЩАЯ СТОИМОСТЬ ПОРТФЕЛЯ
-    # -------------------------
-
+        return sorted(self.positions, key=get_value, reverse=reverse)
+    
+    
     def total_value(self):
+        """
+        Общая стоимость портфеля
+        """
 
         total = 0
 
-        for position in self._portfolio.positions:
-            qty = quotation_to_decimal(position.quantity)
-            price = money_to_decimal(position.current_price)
+        for position in self.positions:
+            qty = Money.to_decimal(position.quantity)
+            price = Money.to_decimal(position.current_price)
 
             total += qty * price
 
         return total
-
-    # -------------------------
-    # ОБЩАЯ ПРИБЫЛЬ
-    # -------------------------
-
-    def total_profit(self):
+    
+    
+    def total_yield(self):
+        """
+        Общый доход
+        """
 
         total = 0
 
-        for position in self._portfolio.positions:
-            total += money_to_decimal(position.expected_yield)
+        for position in self.positions:
+            total += Money.to_decimal(position.expected_yield)
 
         return total
+    
+    
+    def total_daily_yield(self):
+        """
+        Общый доход за день
+        """
 
-    # -------------------------
-    # СОРТИРОВКА ПО ПРИБЫЛИ
-    # -------------------------
+        total = 0
 
-    def top_positions(self, reverse=True):
+        for position in self.positions:
+            total += Money.to_decimal(position.daily_yield)
 
-        return sorted(
-            self._portfolio.positions,
-            key=lambda p: money_to_decimal(p.expected_yield),
-            reverse=reverse
-        )
-
-    def print_summary(self):
-
-        print("\n" + "=" * 60)
-        print("📊 ПОРТФЕЛЬ")
-        print("=" * 60)
-
-        print(f"Общая стоимость: {self.total_value()}")
-        print(f"Общая прибыль:   {self.total_profit()}")
-
-        print("\nТОП по прибыли:\n")
-
-        for position in self.top_positions()[:5]:
-            info = self.cache.get(position.figi)
-            if position.ticker == "RUB000UTSTOM":
-                continue
-            print(
-                f"{position.ticker} → "
-                f"{money_to_decimal(position.expected_yield)}"
-            )
-
-    def print_table(self):
-
-        print("\n" + "=" * 90)
-        print("📊 ПОРТФЕЛЬ (PRO)")
-        print("=" * 90)
-
-        header = f"{'Ticker':<8} {'Qty':<10} {'Price':<15} {'average':<15} {'Value':<15} {'Profit':<15}"
-        print(header)
-        print("-" * 90)
-
-        for position in self._portfolio.positions:
-            info = self.cache.get(position.figi)
-
-            ticker = position.ticker
-            if ticker == "RUB000UTSTOM":
-                continue
-
-            qty = quotation_to_decimal(position.quantity)
-            price = money_to_decimal(position.current_price)
-            price_average = money_to_decimal(position.average_position_price_fifo)
-
-            value = qty * price
-            profit = format_money(position.expected_yield)
-
-            row = f"{ticker:<8} {qty:<10} {price:<15} {price_average:<15} {value:<15} {profit:<15}"
-
-            print(row)
+        return total

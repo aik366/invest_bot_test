@@ -1,28 +1,104 @@
 from decimal import Decimal
+
 from t_tech.invest.schemas import MoneyValue, Quotation
 
 
-# ----------------------
-# MoneyValue → Decimal
-# ----------------------
-def money_to_decimal(value: MoneyValue) -> Decimal:
-    return Decimal(value.units) + Decimal(value.nano) / Decimal("1000000000")
+class Money:
+    """
+    Универсальная работа с денежными значениями.
 
+    Поддерживает:
+        - MoneyValue
+        - Quotation
+        - Decimal
+        - int
+        - float
+    """
 
-# ----------------------
-# Quotation → Decimal
-# (кол-во, проценты)
-# ----------------------
-def quotation_to_decimal(value: Quotation) -> Decimal:
-    return Decimal(value.units) + Decimal(value.nano) / Decimal("1000000000")
+    # ---------------------------------------------------------
 
+    @staticmethod
+    def to_decimal(value) -> Decimal:
+        """
+        Преобразует MoneyValue, Quotation, Decimal,
+        int или float в Decimal.
+        """
 
-def format_money(value: MoneyValue) -> str:
-    d = money_to_decimal(value)
-    return f"{d:,.2f} ₽".replace(",", " ")
+        if isinstance(value, Decimal):
+            return value
 
+        if isinstance(value, int):
+            return Decimal(value)
 
-def format_percent(value: Quotation) -> str:
-    d = quotation_to_decimal(value)
-    sign = "+" if d > 0 else ""
-    return f"{sign}{d:.2f}%"
+        if isinstance(value, float):
+            return Decimal(str(value))
+
+        if isinstance(value, (MoneyValue, Quotation)):
+            return (
+                Decimal(value.units)
+                + Decimal(value.nano) / Decimal("1000000000")
+            )
+
+        raise TypeError(
+            f"Unsupported type: {type(value).__name__}"
+        )
+
+    # ---------------------------------------------------------
+
+    @staticmethod
+    def format(value, currency: str = "₽") -> str:
+        """
+        Красивый вывод денежных значений.
+
+        Примеры:
+            12345.6 -> 12 345.60 ₽
+            12345.6, "" -> 12 345.60
+            12345.6, "$" -> 12 345.60 $
+        """
+
+        amount = Money.to_decimal(value)
+
+        text = f"{amount:,.2f}".replace(",", " ")
+
+        if currency:
+            return f"{text} {currency}"
+
+        return text
+
+    # ---------------------------------------------------------
+
+    @staticmethod
+    def percent(value) -> str:
+        """
+        Красивый вывод процентов.
+
+        Примеры:
+            +15.23%
+            -4.81%
+        """
+
+        amount = Money.to_decimal(value)
+
+        sign = "+" if amount > 0 else ""
+
+        return f"{sign}{amount:.2f}%"
+
+    # ---------------------------------------------------------
+
+    @staticmethod
+    def multiply(left, right) -> Decimal:
+        """
+        Универсальное умножение денежных значений.
+
+        Можно передавать:
+            MoneyValue
+            Quotation
+            Decimal
+            int
+            float
+        """
+
+        return (
+            Money.to_decimal(left)
+            * Money.to_decimal(right)
+        )

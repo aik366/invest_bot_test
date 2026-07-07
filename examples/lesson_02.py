@@ -1,4 +1,8 @@
 from t_tech.invest import Client
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 from config import TOKEN
 import os
 
