@@ -7,22 +7,20 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from config import TOKEN
-from invest_sdk.money import money_to_decimal
+from invest_sdk.money import Money
 
 os.environ["SSL_TBANK_VERIFY"] = "true"
 
 
 def main():
-
     with Client(TOKEN) as client:
-
         account = client.users.get_accounts().accounts[0]
 
         portfolio = client.operations.get_portfolio(
             account_id=account.id
         )
 
-        value = money_to_decimal(
+        value = Money.to_decimal(
             portfolio.total_amount_shares
         )
 

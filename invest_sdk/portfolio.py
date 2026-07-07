@@ -1,5 +1,6 @@
 from invest_sdk.money import Money
 
+
 class Portfolio:
     """
     Работа с портфелем одного счета.
@@ -42,7 +43,6 @@ class Portfolio:
         """
         return self.portfolio.expected_yield
 
-
     def sorted_by_value(self, reverse=True):
         """
         Сортировка позиций по стоимости
@@ -54,8 +54,7 @@ class Portfolio:
             return qty * price
 
         return sorted(self.positions, key=get_value, reverse=reverse)
-    
-    
+
     def total_value(self):
         """
         Общая стоимость портфеля
@@ -70,8 +69,7 @@ class Portfolio:
             total += qty * price
 
         return total
-    
-    
+
     def total_yield(self):
         """
         Общый доход
@@ -83,8 +81,7 @@ class Portfolio:
             total += Money.to_decimal(position.expected_yield)
 
         return total
-    
-    
+
     def total_daily_yield(self):
         """
         Общый доход за день

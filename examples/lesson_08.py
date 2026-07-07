@@ -17,11 +17,12 @@ def main():
             account_id=account.id
         )
 
-        position = portfolio.positions[0]
+        positions = portfolio.positions[0]
+        for position in positions:
+            print(position)
 
 
-
-        print(dir(position))
+        # print(position)
 
 
 if __name__ == "__main__":
